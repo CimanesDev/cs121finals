@@ -4,8 +4,10 @@ import { useAuth } from "../contexts/useAuth";
 import { useNavigate, Link } from "react-router-dom";
 
 const Register = () => {
-  const [username, setUsername] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
+  const [birthday, setBirthday] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -13,7 +15,6 @@ const Register = () => {
   const { register_user } = useAuth();
   const nav = useNavigate();
 
-  // Email validation function
   const isValidEmail = (email) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
@@ -21,9 +22,23 @@ const Register = () => {
 
   const handleRegister = async (e) => {
     e.preventDefault();
-    setError(''); // Clear previous errors
+    setError('');
     
-    // Form validation
+    if (!firstName.trim()) {
+      setError("First name is required");
+      return;
+    }
+
+    if (!lastName.trim()) {
+      setError("Last name is required");
+      return;
+    }
+
+    if (!birthday) {
+      setError("Birthday is required");
+      return;
+    }
+
     if (password !== confirmPassword) {
       setError("Passwords don't match");
       return;
@@ -36,7 +51,7 @@ const Register = () => {
 
     try {
       setIsLoading(true);
-      const success = await register_user(username, email, password);
+      const success = await register_user(firstName, lastName, email, birthday, password);
       
       if (success) {
         nav("/login");
@@ -63,13 +78,36 @@ const Register = () => {
           {error && <div className="error-message">{error}</div>}
           
           <div className="form-group">
-            <label htmlFor="username">Username</label>
+            <label htmlFor="firstName">First Name</label>
             <input
-              id="username"
+              id="firstName"
               type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="Choose a username"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              placeholder="Enter your first name"
+              required
+            />
+          </div>
+          
+          <div className="form-group">
+            <label htmlFor="lastName">Last Name</label>
+            <input
+              id="lastName"
+              type="text"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              placeholder="Enter your last name"
+              required
+            />
+          </div>
+          
+          <div className="form-group">
+            <label htmlFor="birthday">Birthday</label>
+            <input
+              id="birthday"
+              type="date"
+              value={birthday}
+              onChange={(e) => setBirthday(e.target.value)}
               required
             />
           </div>

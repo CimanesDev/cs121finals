@@ -4,7 +4,7 @@ import { useAuth } from "../contexts/useAuth";
 import { Link } from "react-router-dom";
 
 const Login = () => {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -14,8 +14,8 @@ const Login = () => {
     e.preventDefault();
     setError('');
     
-    if (!username.trim()) {
-      setError("Username is required");
+    if (!email.trim()) {
+      setError("Email is required");
       return;
     }
     
@@ -26,10 +26,10 @@ const Login = () => {
     
     try {
       setIsLoading(true);
-      const success = await login_user(username, password);
+      const success = await login_user(email, password);
       
       if (!success) {
-        setError("Invalid username or password");
+        setError("Invalid email or password");
       }
     } catch (err) {
       console.error("Login error:", err);
@@ -51,14 +51,14 @@ const Login = () => {
           {error && <div className="error-message">{error}</div>}
           
           <div className="form-group">
-            <label htmlFor="username">Username</label>
+            <label htmlFor="email">Email</label>
             <input
-              id="username"
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="Enter your username"
-              autoComplete="new-username"
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter your email"
+              autoComplete="new-email"
               required
             />
           </div>
