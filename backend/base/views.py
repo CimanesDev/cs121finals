@@ -1,113 +1,94 @@
-from django.shortcuts import render
-from django.contrib.auth.models import User
-from .models import Note
-from .serializer import NoteSerializer, UserRegistrationSerializer
-
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework import status, permissions
 from rest_framework.response import Response
-
-from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
-    TokenRefreshView,
-)
-
-class CustomTokenObtainPairView(TokenObtainPairView):
-    def post(self, request, *args, **kwargs):
-        
-        try:
-            response = super().post(request, *args, **kwargs)
-            tokens = response.data
-            
-            access_token = tokens['access']
-            refresh_token = tokens['refresh']
-            
-            res = Response()
-
-            res.data = {'success':True}   
-            
-            res.set_cookie(
-                key="access_token",
-                value=access_token,
-                httponly=True,
-                secure=True,
-                samesite='None',
-                path='/'
-            )     
-            
-            res.set_cookie(
-                key="refresh_token",
-                value=refresh_token,
-                httponly=True,
-                secure=True,
-                samesite='None',
-                path='/'
-            ) 
-            
-            return res
-            
-        except:
-            return Response({'success':False})
-        
-class CustomRefreshTokenView(TokenRefreshView):
-    def post(self, request, *args, **kwargs):
-        try:
-            refresh_token = request.COOKIES.get('refresh_token')
-            
-            request.data['refresh'] = refresh_token
-            
-            response = super().post(request, *args, **kwargs)         
-            
-            tokens = response.data
-            access_token = tokens['access']
-            
-            res = Response() 
-            
-            res.data = {'refreshed':True}  
-            
-            res.set_cookie(
-                key='access_token',
-                value=access_token,
-                httponly=True,
-                secure=True,
-                samesite='None',
-                path='/'
-            )
-            
-            return res
-            
-        except:
-            return Response({'refreshed':False})
-        
-@api_view(['POST'])
-def logout(request):
-    try:
-        res = Response()
-        res.data = {'success':True}
-        res.delete_cookie('access_token', path='/', samesite='None')
-        res.delete_cookie('refresh_token', path='/', samesite='None')
-        return res
-    except:
-        return Response({'sucess':False})
-
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def is_authenticated(request):
-    return Response({'authenticated':True})
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+from rest_framework_simplejwt.tokens import RefreshToken
+from django.contrib.auth import authenticate
+from django.contrib.auth.models import User
+from .serializers import UserRegistrationSerializer, UserSerializer, NoteSerializer
+from .models import Note
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
-def register(request):
+def register_user(request):
     serializer = UserRegistrationSerializer(data=request.data)
     if serializer.is_valid():
-        serializer.save()
-        return Response(serializer.data)
-    return Response(serializer.error)
+        # Set username to email before saving
+        email = serializer.validated_data['email']
+        serializer.validated_data['username'] = email
+        
+        user = serializer.save()
+        refresh = RefreshToken.for_user(user)
+        response = Response({
+            'success': True,
+            'message': 'User registered successfully'
+        }, status=status.HTTP_201_CREATED)
+        response.set_cookie('refresh_token', str(refresh), httponly=True, samesite='Strict')
+        response.set_cookie('access_token', str(refresh.access_token), httponly=True, samesite='Strict')
+        return response
+    return Response({'success': False, 'errors': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def login_view(request):
+    email = request.data.get('email')
+    password = request.data.get('password')
     
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def get_notes(request):
-    user = request.user
-    notes = Note.objects.filter(owner=user)
-    serializer = NoteSerializer(notes, many=True)
-    return Response(serializer.data)
+    if not email or not password:
+        return Response({'success': False, 'message': 'Please provide both email and password'}, 
+                        status=status.HTTP_400_BAD_REQUEST)
+    
+    # Authenticate using email as username
+    user = authenticate(username=email, password=password)
+    
+    if user is not None:
+        refresh = RefreshToken.for_user(user)
+        response = Response({
+            'success': True,
+            'message': 'Login successful',
+            'first_name': user.first_name
+        })
+        response.set_cookie('refresh_token', str(refresh), httponly=True, samesite='Strict')
+        response.set_cookie('access_token', str(refresh.access_token), httponly=True, samesite='Strict')
+        return response
+    else:
+        return Response({'success': False, 'message': 'Invalid email or password'}, 
+                        status=status.HTTP_401_UNAUTHORIZED)
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def logout_view(request):
+    response = Response({'success': True, 'message': 'Logged out successfully'})
+    response.delete_cookie('refresh_token')
+    response.delete_cookie('access_token')
+    return response
+
+@api_view(['POST'])
+@permission_classes([permissions.IsAuthenticated])
+def authenticated_view(request):
+    if request.user.is_authenticated:
+        return Response({
+            'success': True,
+            'first_name': request.user.first_name,
+            'authenticated': True
+        })
+    else:
+        return Response({
+            'success': False,
+            'authenticated': False,
+            'message': 'User not authenticated'
+        }, status=status.HTTP_401_UNAUTHORIZED)
+
+@api_view(['GET', 'POST'])
+@permission_classes([permissions.IsAuthenticated])
+def notes_view(request):
+    if request.method == 'GET':
+        notes = Note.objects.filter(user=request.user)
+        serializer = NoteSerializer(notes, many=True)
+        return Response(serializer.data)
+    elif request.method == 'POST':
+        serializer = NoteSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(user=request.user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
