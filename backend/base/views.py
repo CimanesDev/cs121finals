@@ -13,7 +13,6 @@ from .models import Note
 def register_user(request):
     serializer = UserRegistrationSerializer(data=request.data)
     if serializer.is_valid():
-        # Set username to email before saving
         email = serializer.validated_data['email']
         serializer.validated_data['username'] = email
         
@@ -38,7 +37,6 @@ def login_view(request):
         return Response({'success': False, 'message': 'Please provide both email and password'}, 
                         status=status.HTTP_400_BAD_REQUEST)
     
-    # Authenticate using email as username
     user = authenticate(username=email, password=password)
     
     if user is not None:
