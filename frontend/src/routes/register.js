@@ -13,6 +13,7 @@ const Register = () => {
   const { register_user } = useAuth();
   const nav = useNavigate();
 
+  // Email validation function
   const isValidEmail = (email) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
@@ -20,43 +21,31 @@ const Register = () => {
 
   const handleRegister = async (e) => {
     e.preventDefault();
-    setError('');
+    setError(''); // Clear previous errors
     
+    // Form validation
     if (password !== confirmPassword) {
       setError("Passwords don't match");
       return;
     }
-  
+
     if (!isValidEmail(email)) {
       setError("Please enter a valid email address");
       return;
     }
-  
+
     try {
       setIsLoading(true);
       const success = await register_user(username, email, password);
       
       if (success) {
-        alert("Successfully registered! You can now log in.");
         nav("/login");
       } else {
         setError("Registration failed. Please try again.");
       }
     } catch (err) {
       console.error("Registration error:", err);
-      if (err.response) {
-        if (err.response.data?.username_error) {
-          setError("Username already exists. Please choose a different username.");
-        } else if (err.response.data?.email_error) {
-          setError("Email is already in use. Please use a different email.");
-        } else if (err.response.status === 500) {
-          setError("Something went wrong. Please try again later.");
-        } else {
-          setError("Registration failed. Please try again.");
-        }
-      } else {
-        setError("Registration failed. Please try again.");
-      }
+      setError("Registration failed. Please try again.");
     } finally {
       setIsLoading(false);
     }
