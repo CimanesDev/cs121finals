@@ -1,15 +1,42 @@
 import { useState } from "react";
 import "./login.css";
-import { login } from "../endpoints/api";
+import { useAuth } from "../contexts/useAuth";
+import { Link } from "react-router-dom";
 
 const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const { login_user } = useAuth();
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    login(username, password)
+    setError('');
+    
+    if (!username.trim()) {
+      setError("Username is required");
+      return;
+    }
+    
+    if (!password) {
+      setError("Password is required");
+      return;
+    }
+    
+    try {
+      setIsLoading(true);
+      const success = await login_user(username, password);
+      
+      if (!success) {
+        setError("Invalid username or password");
+      }
+    } catch (err) {
+      console.error("Login error:", err);
+      setError("Login failed. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -20,7 +47,9 @@ const Login = () => {
           <p>Sign in to your account</p>
         </div>
         
-        <form onSubmit={handleLogin} className="login-form">
+        <form onSubmit={handleLogin} className="login-form" autoComplete="off">
+          {error && <div className="error-message">{error}</div>}
+          
           <div className="form-group">
             <label htmlFor="username">Username</label>
             <input
@@ -29,6 +58,7 @@ const Login = () => {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="Enter your username"
+              autoComplete="new-username"
               required
             />
           </div>
@@ -41,10 +71,10 @@ const Login = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter your password"
+              autoComplete="new-password"
               required
             />
           </div>
-          
           
           <button 
             type="submit" 
@@ -56,8 +86,8 @@ const Login = () => {
         </form>
         
         <div className="login-footer">
-          <p>Don't have an account? <a href="#">Create one</a></p>
-        </div>
+          <p>Don't have an account? <Link to="/register">Create one</Link></p>
+        </div> 
       </div>
     </div>
   );

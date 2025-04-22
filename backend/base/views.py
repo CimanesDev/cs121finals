@@ -101,8 +101,17 @@ def register(request):
     serializer = UserRegistrationSerializer(data=request.data)
     if serializer.is_valid():
         serializer.save()
-        return Response(serializer.data)
-    return Response(serializer.error)
+        return Response({'success': True, 'message': 'User registered successfully'})
+    
+    errors = serializer.errors
+    error_response = {'success': False}
+    
+    if 'username' in errors:
+        error_response['username_error'] = 'Username already exists'
+    if 'email' in errors:
+        error_response['email_error'] = 'Email is already in use'
+
+    return Response(error_response, status=400)
     
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])

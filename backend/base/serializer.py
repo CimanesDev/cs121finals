@@ -4,9 +4,10 @@ from django.contrib.auth.models import User
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
+    
     class Meta:
-        model=User
-        fields=['username', 'email', 'password']
+        model = User
+        fields = ['username', 'email', 'password']
         
     def create(self, validated_data):
         user = User(
@@ -16,13 +17,23 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         user.set_password(validated_data['password'])
         user.save()
         return user
+    
+    def validate_username(self, value):
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError("Username already exists")
+        return value
+    
+    def validate_email(self, value):
+        if User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("Email is already in use")
+        return value
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
-        model=User
-        fields=['username']
+        model = User
+        fields = ['username']
 
 class NoteSerializer(serializers.ModelSerializer):
     class Meta:
-        model=Note
-        fields=['id', 'description']
+        model = Note
+        fields = ['id', 'description']
