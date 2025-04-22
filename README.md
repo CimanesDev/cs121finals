@@ -38,9 +38,9 @@ A full-stack authentication system featuring login, registration, and logout fun
 ![image](https://github.com/user-attachments/assets/9aa7aea3-3eb0-4fde-9837-ef80824ca768)
 
 ## Error Handling
--Missing required fields
--Invalid email or password
--Failed Registration (Email already exists)
--Passwords don't match
+- Missing required fields
+- Invalid email or password
+- Failed Registration (Email already exists)
+- Passwords don't match
 
 ## Made by: Josh Cimanes 
